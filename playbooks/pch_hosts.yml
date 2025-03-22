@@ -1,0 +1,37 @@
+---
+- name: "PCH Playbook"
+  hosts: "pch_hosts"
+
+  handlers:
+    # Restart sshd Service
+    - name: "Restart sshd Service"
+      ansible.builtin.service:
+        name: "sshd"
+        state: "restarted"
+
+  tasks:
+    # Execute System-Level Tasks with Root Privileges
+    - name: "Execute System-Level Tasks with Root Privileges"
+      become_user: "root"
+      become: true
+      block:
+        # Openssh-Server Setup
+        - name: "Openssh-Server Setup"
+          ansible.builtin.include_tasks:
+            file: "{{ pch_project_root_path }}/roles/system/tasks/openssh_server_setup.yml"
+        # Golang Install
+        - name: "Golang Install"
+          ansible.builtin.include_tasks:
+            file: "{{ pch_project_root_path }}/roles/system/tasks/golang_install.yml"
+
+    # Manage SSH Authorized Keys for User Access
+    - name: "SSH Key Setup"
+      ansible.builtin.include_tasks:
+        file: "{{ pch_project_root_path }}/roles/ssh/tasks/manage_ssh_authorized_keys.yml"
+      vars:
+        target_user: "{{ ansible_user }}"
+
+    # Nginx Check Program Setup
+    - name: "Nginx Check Program Setup"
+      ansible.builtin.include_tasks:
+        file: "{{ pch_project_root_path }}/roles/software/nginx_check_setup.yml"

@@ -1,0 +1,33 @@
+---
+# Nginx Check Program Setup
+
+- name: "Clone GitHub Repository"
+  ansible.builtin.git:
+    accept_hostkey: true
+    dest: "/home/{{ ansible_user }}/p-ch-golang"
+    force: true
+    repo: "https://github.com/dark06/p-ch-golang.git"
+    version: "main"
+
+- name: "Install Go Dependencies"
+  ansible.builtin.shell:
+    chdir: "/home/{{ ansible_user }}/p-ch-golang"
+    cmd: "/usr/local/bin/go/bin/go mod download"
+
+- name: "Build Nginx Check Program"
+  ansible.builtin.shell:
+    chdir: "/home/{{ ansible_user }}/p-ch-golang"
+    cmd: "/usr/local/bin/go/bin/go build -o ./go/bin/nginx_check"
+  register: nginx_check_updated
+
+- name: "Move Nginx Check Program to /usr/local/bin"
+  ansible.builtin.copy:
+    dest: "/usr/local/bin/nginx_check"
+    group: "root"
+    mode: "0755"
+    owner: "root"
+    remote_src: true
+    src: "/home/{{ ansible_user }}/p-ch-golang/go/bin/nginx_check"
+  become_user: root
+  become: true
+  when: nginx_check_updated.changed

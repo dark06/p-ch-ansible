@@ -1,0 +1,10 @@
+---
+# Manage SSH Authorized Keys for User Access
+
+- name: "Persist SSH Public Key in Authorized Keys"
+  ansible.posix.authorized_key:
+    key: "{{ lookup('file', item) }}"
+    state: "present"
+    user: "{{ target_user }}"
+  with_fileglob:
+    - "{{ pch_project_root_path }}/secrets/id_ed25519.pub"

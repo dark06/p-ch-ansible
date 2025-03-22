@@ -1,0 +1,59 @@
+version: "3"
+
+dotenv: [".env"]
+
+tasks:
+  default:
+    cmds:
+      - task: playbook:syntax-check
+
+  setup:
+    run: once
+    sources:
+      - ./requirements.txt
+    cmds:
+      - python -m venv venv
+      - ./venv/bin/pip install -r requirements.txt
+  cleanup:
+    cmds:
+      - rm -rf ./.task ./venv
+
+  ssh-key:generate:
+    status:
+      - test -f ./secrets/id_ed25519
+      - test -f ./secrets/id_ed25519.pub
+    interactive: true
+    cmds:
+      - mkdir -p ./secrets
+      - ssh-keygen -t ed25519 -f ./secrets/id_ed25519
+
+  playbook:syntax-check:
+    deps: [setup]
+    cmds:
+      - ./venv/bin/ansible-lint ./playbooks ./roles
+      - find ./playbooks -name "*.yml" -type f -exec ./venv/bin/ansible-playbook --inventory ./inventory/hosts.yml --syntax-check {} \;
+
+  playbook:dry-run:
+    deps: [setup]
+    interactive: true
+    cmds:
+      - task: playbook:syntax-check
+      - task: ssh-key:generate
+      - >
+        ./venv/bin/ansible-playbook
+        --check
+        --inventory ./inventory/hosts.yml
+        --limit "pch_hosts"
+        --verbose
+        ./playbooks/pch_hosts.yml
+  playbook:run:
+    deps: [setup]
+    interactive: true
+    cmds:
+      - task: playbook:syntax-check
+      - task: ssh-key:generate
+      - >
+        ./venv/bin/ansible-playbook
+        --inventory ./inventory/hosts.yml
+        --limit "pch_hosts"
+        ./playbooks/pch_hosts.yml
