@@ -1,0 +1,24 @@
+---
+# Openssh-Server Setup
+
+- name: "Run Aptitude Update"
+  ansible.builtin.apt:
+    force_apt_get: true
+    name: "aptitude"
+    state: "present"
+    update_cache: true
+
+- name: "Install openssh-server"
+  ansible.builtin.apt:
+    name: "openssh-server"
+    state: "present"
+    update_cache: true
+
+- name: "Configure sshd"
+  ansible.builtin.template:
+    dest: "/etc/ssh/sshd_config"
+    group: "root"
+    mode: "0644"
+    owner: "root"
+    src: "{{ pch_project_root_path }}/roles/system/templates/sshd_config.j2"
+  notify: "Restart sshd Service"

@@ -172,3 +172,14 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Task
+.task/
+
+# Project
+.ansible/
+inventory/known_hosts
+secrets/
+
+# Visual Studio Code
+.vscode/

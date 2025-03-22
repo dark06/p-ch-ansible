@@ -1,0 +1,79 @@
+---
+# Golang Install
+
+- name: "Read System Architecture"
+  ansible.builtin.command: "dpkg --print-architecture"
+  changed_when: false
+  check_mode: false
+  register: system_architecture_output
+
+- name: "Read Go Version"
+  ansible.builtin.command: "/usr/local/bin/go/bin/go version"
+  changed_when: false
+  check_mode: false
+  failed_when: false
+  register: go_version_output
+
+- name: "Set Variables"
+  ansible.builtin.set_fact:
+    golang_version: "1.24.1"
+    installed_go_version: "{{ (go_version_output.stdout | ansible.builtin.regex_search('go(\\d+\\.\\d+\\.\\d+)', '\\1') | first) | default('none', true) }}"
+    system_architecture: "{{ system_architecture_output.stdout }}"
+  when: system_architecture_output is defined
+
+- name: "Check if Golang is already installed and up-to-date"
+  ansible.builtin.debug:
+    msg: "Installed Go version: {{ installed_go_version }}, Required version: {{ golang_version }}"
+
+- name: "Cleanup Golang Tar File"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: "absent"
+  loop:
+    - "/tmp/go"
+    - "/tmp/golang.tar.gz"
+  when: installed_go_version != golang_version
+
+- name: "Download Golang Tar File"
+  ansible.builtin.get_url:
+    dest: "/tmp/golang.tar.gz"
+    mode: "0755"
+    url: "https://go.dev/dl/go{{ golang_version }}.linux-{{ system_architecture }}.tar.gz"
+  when: installed_go_version != golang_version
+
+- name: "Extract Golang Tar File"
+  ansible.builtin.unarchive:
+    dest: "/tmp"
+    remote_src: true
+    src: "/tmp/golang.tar.gz"
+  when: installed_go_version != golang_version
+
+- name: "Move Golang to /usr/local"
+  ansible.builtin.copy:
+    dest: "/usr/local/bin"
+    group: "root"
+    mode: "0755"
+    owner: "root"
+    remote_src: true
+    src: "/tmp/go"
+  when: installed_go_version != golang_version
+
+- name: "Add Golang to root PATH"
+  ansible.builtin.lineinfile:
+    group: "root"
+    line: "export PATH=/usr/local/bin/go/bin:$PATH"
+    mode: "0644"
+    owner: "root"
+    path: "/root/.profile"
+    state: "present"
+  when: installed_go_version != golang_version
+
+- name: "Add Golang to ansible_user PATH"
+  ansible.builtin.lineinfile:
+    group: "{{ ansible_user }}"
+    line: "export PATH=/usr/local/bin/go/bin:$PATH"
+    mode: "0644"
+    owner: "{{ ansible_user }}"
+    path: "/home/{{ ansible_user }}/.profile"
+    state: "present"
+  when: installed_go_version != golang_version
